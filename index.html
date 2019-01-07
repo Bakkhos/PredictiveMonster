@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monster Slayer</title>
+    <script src="https://npmcdn.com/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="css/foundation.min.css">
+    <link rel="stylesheet" href="css/app.css">
+    <meta charset="UTF-8"/>
+</head>
+<body>
+<div id="app" @keyup.a="attack(false)" @keyup.d="attack(true)" @keyup.w="heal">
+    <section class="row">
+        <div class="small-6 columns">
+            <h1 class="text-center">YOU</h1>
+            <div class="healthbar">
+                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" v-bind:style="{width: String(php) + '%'}">
+                    {{ php }}
+                </div>
+            </div>
+        </div>
+        <div class="small-6 columns">
+            <h1 class="text-center">MONSTER</h1>
+            <div class="healthbar">
+                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" v-bind:style="{width: String(mhp) + '%'}">
+                    {{ mhp }}
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="row controls" v-if="! running_state">
+        <div class="small-12 columns">
+            <button id="start-game" @click="game_init()">START NEW GAME</button>
+        </div>
+    </section>
+    <section class="row controls" v-else>
+        <div class="small-12 columns">
+            <button id="attack" @click="attack(false)">ATTACK (a)</button>
+            <button id="special-attack" @click="attack(true)">SPECIAL ATTACK (d)</button>
+            <button id="heal" @click="heal()">HEAL (w)</button>
+            <button id="give-up" @click="running_state = false">GIVE UP</button>
+        </div>
+    </section>
+    <section class="row controls" v-if="log.length > 0" style="font-size:22px">
+        Your last attacks: <span>{{ player_history.slice().map(isspec => isspec ? 'd':'a').reduce((str, c) => str+c)}}</span>
+    </section>
+    <section class="row log" v-if="log.length > 0">
+        <div class="small-12 columns">
+            <ul>
+                <li v-for="(entry, index) in log" :class="index % 2 === 0 ? 'player-turn' : 'monster-turn'">
+                    {{ entry }}
+                </li>
+            </ul>
+        </div>
+    </section>
+</div>
+<script>
+    const DEPTH = 4;
+
+    //Convert length DEPTH array of booleans to int
+    let arr_to_int = function(bool_array) {
+        let rslt = 0;
+        for (let i = 0; i < DEPTH; i++) {
+            rslt += bool_array[i] * 2**i;
+        }
+        return rslt;
+    };
+
+    //Convert int to boolean array of length DEPTH
+    let int_to_arr = function(n){
+        let rslt = new Array(DEPTH);
+        for (let i = 0; i < DEPTH; i++){
+            rslt[i] = (n & ( 1 << i ) > 0);
+        }
+        return rslt;
+    };
+
+    let app = new Vue({
+        el : "#app",
+        data : {
+            php : 100,
+            mhp : 100,
+            running_state : false,
+            monster_knowledge : new Array(2**DEPTH), //map from DEPTH-grams to probability that player does the special attack
+            player_history : [], //last DEPTH attack moves by player: true for special attack, false otherwise
+            log : []
+        },
+        computed: {
+            monster_expects_special_attack : function(){
+                if (this.player_history.length < DEPTH)
+                    return Math.random() > 0.5;
+
+                let n_spec, n;
+                [n_spec, n] = (this.monster_knowledge[arr_to_int(this.player_history)]);
+
+                if (n === 0)
+                    return Math.random() > 0.5;
+                else
+                    return n_spec/n > 0.5;
+            }
+        },
+
+        methods : {
+            game_init : function () {
+                this.mhp = this.php = 100;
+                this.running_state = true;
+                this.log = [];
+
+                for (let i=0; i < 2**DEPTH; i++)
+                    this.monster_knowledge[i] = [0,0];
+                this.player_history = [];
+            },
+
+            attack : function (isSpecialAttack) {
+                this.log.push(`${isSpecialAttack ? 'special' : 'regular'} attack!`);
+
+                if (this.monster_expects_special_attack === isSpecialAttack){
+                    this.php -= 1;
+                    this.mhp -= 0;
+                    this.log.push(`The monster anticipated this!`);
+                }
+                else {
+                    this.php -= 0;
+                    this.mhp -= 1;
+                    this.log.push(`You hit!`);
+                }
+
+                if (this.player_history.length >= DEPTH) {
+                    //The monster learns...
+                    let n, n_spec;
+                    [n_spec, n] = this.monster_knowledge[arr_to_int(this.player_history)];
+                    n += 1;
+                    n_spec += isSpecialAttack ? 1 : 0;
+                    Vue.set(this.monster_knowledge, arr_to_int(this.player_history), [n_spec, n]);
+                }
+
+                this.player_history.push(isSpecialAttack);
+                if (this.player_history.length > DEPTH)
+                    this.player_history.shift();
+            },
+
+            heal : function () {
+                const heal = 20;
+                this.php = Math.min(this.php+heal, 100);
+                this.mhp = Math.min(this.mhp+heal, 100);
+                this.log.push(`You heal for ${heal}`);
+                this.log.push(`The monster heals for ${heal}`);
+            },
+        },
+        watch: {
+            php : function(php, _) {
+                if (php <= 0) {
+                    alert("You died.");
+                    this.running_state = false;
+                }
+            },
+            mhp : function(mhp, _) {
+                if (mhp <= 0) {
+                    alert("You won.");
+                    this.running_state = false;
+                }
+            }
+        }
+    })
+
+</script>
+</body>
+</html>
