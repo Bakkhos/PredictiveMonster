@@ -46,7 +46,7 @@
     <section class="row log" v-if="log.length > 0">
         <div class="small-12 columns">
             <ul>
-                <li v-for="(entry, index) in log" :class="index % 2 === 0 ? 'player-turn' : 'monster-turn'">
+                <li v-for="(entry, index) in log.slice().reverse()" :class="index % 2 === 1 ? 'player-turn' : 'monster-turn'">
                     {{ entry }}
                 </li>
             </ul>
@@ -85,7 +85,7 @@
             log : []
         },
         computed: {
-            monster_expects_special_attack : function(){
+            monster_expects_special_attack : function() {
                 if (this.player_history.length < DEPTH)
                     return Math.random() > 0.5;
 
@@ -95,8 +95,11 @@
                 if (n === 0)
                     return Math.random() > 0.5;
                 else
-                    return n_spec/n > 0.5;
+                    return n_spec / n > 0.5;
             }
+            // log_rev : function() {
+            //     return this.log.slice().reverse()
+            // }
         },
 
         methods : {
