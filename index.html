@@ -13,7 +13,7 @@
         <div class="small-6 columns">
             <h1 class="text-center">YOU</h1>
             <div class="healthbar">
-                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" v-bind:style="{width: String(php) + '%'}">
+                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" v-bind:style="{width: String(Math.floor(100 * php/MAX_HP)) + '%'}">
                     {{ php }}
                 </div>
             </div>
@@ -21,7 +21,7 @@
         <div class="small-6 columns">
             <h1 class="text-center">MONSTER</h1>
             <div class="healthbar">
-                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" v-bind:style="{width: String(mhp) + '%'}">
+                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" v-bind:style="{width: String(Math.floor(100 * mhp/MAX_HP)) + '%'}">
                     {{ mhp }}
                 </div>
             </div>
@@ -55,6 +55,7 @@
 </div>
 <script>
     const DEPTH = 4;
+    const MAX_HP = 50;
 
     //Convert length DEPTH array of booleans to int
     let arr_to_int = function(bool_array) {
@@ -77,8 +78,8 @@
     let app = new Vue({
         el : "#app",
         data : {
-            php : 100,
-            mhp : 100,
+            php : MAX_HP,
+            mhp : MAX_HP,
             running_state : false,
             monster_knowledge : new Array(2**DEPTH), //map from DEPTH-grams to probability that player does the special attack
             player_history : [], //last DEPTH attack moves by player: true for special attack, false otherwise
@@ -104,7 +105,7 @@
 
         methods : {
             game_init : function () {
-                this.mhp = this.php = 100;
+                this.mhp = this.php = MAX_HP;
                 this.running_state = true;
                 this.log = [];
 
@@ -143,8 +144,8 @@
 
             heal : function () {
                 const heal = 20;
-                this.php = Math.min(this.php+heal, 100);
-                this.mhp = Math.min(this.mhp+heal, 100);
+                this.php = Math.min(this.php+heal, MAX_HP);
+                this.mhp = Math.min(this.mhp+heal, MAX_HP);
                 this.log.push(`You heal for ${heal}`);
                 this.log.push(`The monster heals for ${heal}`);
             },
@@ -162,7 +163,11 @@
                     this.running_state = false;
                 }
             }
-        }
+        },
+	created() {
+		//make JS constants available in template
+		this.MAX_HP = MAX_HP;
+	}
     })
 
 </script>
